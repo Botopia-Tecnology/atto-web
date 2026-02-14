@@ -24,12 +24,31 @@ uniform vec3 uColor;
 uniform float uAmplitude;
 uniform float uDistance;
 uniform vec2 uMouse;
+uniform float uMorphProgress;
 
 #define PI 3.1415926538
 
 const int u_line_count = 40;
 const float u_line_width = 7.0;
 const float u_line_blur = 10.0;
+
+// === 7 faders: x-position (0-1), knob center Y (0-1), knob height (0-1) ===
+// Positions tuned to match the atto sound logo
+const int FADER_COUNT = 7;
+
+vec3 getFader(int i) {
+    // Returns vec3(xPos, knobCenterY, knobHalfHeight)
+    // Heart-shaped pattern: tops form two humps, bottoms form a V
+    // Top contour:  0.68  0.72↑ 0.68  0.62↓ 0.68  0.72↑ 0.66
+    // Bot contour:  0.50  0.44  0.36  0.26↓ 0.38  0.48  0.46
+    if (i == 0) return vec3(0.27, 0.59, 0.18);
+    if (i == 1) return vec3(0.35, 0.58, 0.25);
+    if (i == 2) return vec3(0.42, 0.52, 0.29);
+    if (i == 3) return vec3(0.50, 0.44, 0.33);
+    if (i == 4) return vec3(0.58, 0.53, 0.26);
+    if (i == 5) return vec3(0.65, 0.60, 0.21);
+    return         vec3(0.73, 0.56, 0.19);
+}
 
 float Perlin2D(vec2 P) {
     vec2 Pi = floor(P);
@@ -56,6 +75,56 @@ float pixel(float count, vec2 resolution) {
     return (1.0 / max(resolution.x, resolution.y)) * count;
 }
 
+// SDF capsule: distance from point p to line segment a→b, with radius r
+float sdCapsule(vec2 p, vec2 a, vec2 b, float r) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+
+// Draw all 7 faders as SDF shapes, with noise displacement controlled by morph
+float drawFaders(vec2 uv, float morph, float time) {
+    float aspect = iResolution.x / iResolution.y;
+    // Work in aspect-corrected coordinates centered at 0.5
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    float result = 0.0;
+    float px = pixel(1.0, iResolution.xy);
+
+    for (int i = 0; i < FADER_COUNT; i++) {
+        vec3 fader = getFader(i);
+        float fx = (fader.x - 0.5) * aspect;
+        float fy = fader.y - 0.5;
+        float kh = fader.z;
+
+        // Apply noise displacement that grows with morph
+        float nSeed = float(i) * 13.7;
+        float dispX = Perlin2D(vec2(time * 0.4 + nSeed, uv.y * 3.0)) * morph * 0.4;
+        float dispY = Perlin2D(vec2(time * 0.3 + nSeed + 50.0, uv.y * 2.0)) * morph * 0.2;
+
+        vec2 offset = vec2(dispX, dispY);
+
+        // Thin stem (full height vertical line)
+        float stemWidth = mix(0.0018, 0.0005, morph);
+        float stemDist = abs(p.x - fx - offset.x) - stemWidth;
+        // Fade stem opacity as morph increases
+        float stemAlpha = smoothstep(px * 2.0, 0.0, stemDist) * mix(0.45, 0.0, smoothstep(0.0, 0.7, morph));
+
+        // Capsule knob
+        vec2 knobTop = vec2(fx, fy + kh) + offset;
+        vec2 knobBot = vec2(fx, fy - kh) + offset;
+        float knobRadius = mix(0.028, 0.003, morph);
+        float knobDist = sdCapsule(p, knobBot, knobTop, knobRadius);
+        float knobAlpha = smoothstep(px * 2.0, -px * 0.5, knobDist) * 0.78 * (1.0 - smoothstep(0.0, 0.9, morph));
+
+        result = max(result, max(stemAlpha, knobAlpha));
+    }
+
+    return result;
+}
+
+// Original thread line function
 float lineFn(vec2 st, float width, float perc, float offset, vec2 mouse, float time, float amplitude, float distance) {
     float split_offset = (perc * 0.4);
     float split_point = 0.1 + split_offset;
@@ -97,7 +166,10 @@ float lineFn(vec2 st, float width, float perc, float offset, vec2 mouse, float t
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
+    float morph = uMorphProgress; // 0 = logo, 1 = threads
 
+    // === Threads (fade in as morph increases) ===
+    float threadsFade = smoothstep(0.2, 0.8, morph);
     float line_strength = 1.0;
     for (int i = 0; i < u_line_count; i++) {
         float p = float(i) / float(u_line_count);
@@ -112,9 +184,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             uDistance
         ));
     }
+    float threadsVal = (1.0 - line_strength) * threadsFade;
 
-    float colorVal = 1.0 - line_strength;
-    fragColor = vec4(uColor * colorVal, colorVal);
+    // === Procedural faders (visible when morph is low) ===
+    float fadersVal = drawFaders(uv, morph, iTime);
+
+    // === Combine: max blending so both layers contribute ===
+    float combined = max(threadsVal, fadersVal);
+    fragColor = vec4(uColor * combined, combined);
 }
 
 void main() {
@@ -122,11 +199,30 @@ void main() {
 }
 `;
 
-interface ThreadsProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "color"> {
+function easeInOutSine(t: number): number {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
+function computeMorphProgress(timeSeconds: number): number {
+  const PAUSE = 2.5; // seconds to hold each state
+  const MORPH = 3.5; // seconds per transition
+  const CYCLE = (PAUSE + MORPH) * 2; // 12s total
+
+  const t = timeSeconds % CYCLE;
+
+  if (t < PAUSE) return 0;
+  if (t < PAUSE + MORPH) return easeInOutSine((t - PAUSE) / MORPH);
+  if (t < PAUSE * 2 + MORPH) return 1;
+  return 1 - easeInOutSine((t - PAUSE * 2 - MORPH) / MORPH);
+}
+
+interface ThreadsProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "color"> {
   color?: [number, number, number];
   amplitude?: number;
   distance?: number;
   enableMouseInteraction?: boolean;
+  enableMorph?: boolean;
 }
 
 export default function Threads({
@@ -134,6 +230,7 @@ export default function Threads({
   amplitude = 1,
   distance = 0,
   enableMouseInteraction = false,
+  enableMorph = false,
   ...rest
 }: ThreadsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -167,6 +264,7 @@ export default function Threads({
         uAmplitude: { value: amplitude },
         uDistance: { value: distance },
         uMouse: { value: new Float32Array([0.5, 0.5]) },
+        uMorphProgress: { value: enableMorph ? 0.0 : 1.0 },
       },
     });
 
@@ -210,7 +308,14 @@ export default function Threads({
         program.uniforms.uMouse.value[0] = 0.5;
         program.uniforms.uMouse.value[1] = 0.5;
       }
-      program.uniforms.iTime.value = t * 0.001;
+
+      const timeSeconds = t * 0.001;
+      program.uniforms.iTime.value = timeSeconds;
+
+      if (enableMorph) {
+        program.uniforms.uMorphProgress.value =
+          computeMorphProgress(timeSeconds);
+      }
 
       renderer.render({ scene: mesh });
       animationFrameId.current = requestAnimationFrame(update);
@@ -218,7 +323,8 @@ export default function Threads({
     animationFrameId.current = requestAnimationFrame(update);
 
     return () => {
-      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+      if (animationFrameId.current)
+        cancelAnimationFrame(animationFrameId.current);
       window.removeEventListener("resize", resize);
 
       if (enableMouseInteraction) {
@@ -228,7 +334,7 @@ export default function Threads({
       if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, [color, amplitude, distance, enableMouseInteraction]);
+  }, [color, amplitude, distance, enableMouseInteraction, enableMorph]);
 
   return <div ref={containerRef} className="threads-container" {...rest} />;
 }
