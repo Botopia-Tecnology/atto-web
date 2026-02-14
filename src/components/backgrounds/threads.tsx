@@ -89,14 +89,20 @@ float drawFaders(vec2 uv, float morph, float time) {
     // Work in aspect-corrected coordinates centered at 0.5
     vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
 
+    // Responsive scaling: on portrait/narrow screens, shrink capsules to avoid overlap
+    float rScale = smoothstep(0.5, 1.5, aspect);  // 0 at portrait, 1 at landscape
+
     float result = 0.0;
     float px = pixel(1.0, iResolution.xy);
 
+    // On portrait screens, spread faders wider to fill more of the width
+    float xSpread = mix(1.7, 1.0, rScale);
+
     for (int i = 0; i < FADER_COUNT; i++) {
         vec3 fader = getFader(i);
-        float fx = (fader.x - 0.5) * aspect;
+        float fx = (fader.x - 0.5) * xSpread * aspect;
         float fy = fader.y - 0.5;
-        float kh = fader.z;
+        float kh = fader.z * mix(0.55, 1.0, rScale);
 
         // Apply noise displacement that grows with morph
         float nSeed = float(i) * 13.7;
@@ -106,7 +112,7 @@ float drawFaders(vec2 uv, float morph, float time) {
         vec2 offset = vec2(dispX, dispY);
 
         // Thin stem (full height vertical line)
-        float stemWidth = mix(0.0018, 0.0005, morph);
+        float stemWidth = mix(0.0018 * mix(0.6, 1.0, rScale), 0.0005, morph);
         float stemDist = abs(p.x - fx - offset.x) - stemWidth;
         // Fade stem opacity as morph increases
         float stemAlpha = smoothstep(px * 2.0, 0.0, stemDist) * mix(0.45, 0.0, smoothstep(0.0, 0.7, morph));
@@ -114,7 +120,7 @@ float drawFaders(vec2 uv, float morph, float time) {
         // Capsule knob
         vec2 knobTop = vec2(fx, fy + kh) + offset;
         vec2 knobBot = vec2(fx, fy - kh) + offset;
-        float knobRadius = mix(0.028, 0.003, morph);
+        float knobRadius = mix(0.028 * mix(0.5, 1.0, rScale), 0.003, morph);
         float knobDist = sdCapsule(p, knobBot, knobTop, knobRadius);
         float knobAlpha = smoothstep(px * 2.0, -px * 0.5, knobDist) * 0.78 * (1.0 - smoothstep(0.0, 0.9, morph));
 

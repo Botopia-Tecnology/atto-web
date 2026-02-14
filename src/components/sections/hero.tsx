@@ -16,13 +16,13 @@ export default function Hero() {
       </div>
 
       {/* Logo appears at bottom when faders (procedural logo) are active */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-8 flex justify-center animate-[logoFade_12s_ease-in-out_infinite]">
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center animate-[logoFade_12s_ease-in-out_infinite] sm:bottom-8">
         <Image
           src="https://res.cloudinary.com/dxzcutnlp/image/upload/v1771017624/Property_1_Variant4_vq9shb.png"
           alt="atto sound"
           width={96}
           height={32}
-          className="opacity-100"
+          className="w-16 sm:w-20 md:w-24"
           priority
         />
       </div>
