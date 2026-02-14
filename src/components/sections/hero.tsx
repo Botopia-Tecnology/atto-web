@@ -1,9 +1,29 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Threads from "@/components/backgrounds/threads";
 
 export default function Hero() {
+  const morphRef = useRef(0);
+  const logoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let raf: number;
+    function syncLogo() {
+      if (logoRef.current) {
+        // Show logo when threads are active (morph high), hide during faders
+        const morph = morphRef.current;
+        let opacity = (morph - 0.3) / 0.4;
+        opacity = Math.max(0, Math.min(1, opacity));
+        logoRef.current.style.opacity = String(opacity);
+      }
+      raf = requestAnimationFrame(syncLogo);
+    }
+    raf = requestAnimationFrame(syncLogo);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <section className="relative h-dvh w-full overflow-hidden bg-black">
       <div className="absolute inset-0">
@@ -12,11 +32,16 @@ export default function Hero() {
           distance={0}
           enableMouseInteraction
           enableMorph
+          morphProgressRef={morphRef}
         />
       </div>
 
-      {/* Logo appears at bottom when faders (procedural logo) are active */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center animate-[logoFade_12s_ease-in-out_infinite] sm:bottom-8">
+      {/* Logo appears at bottom when threads (waves) are active */}
+      <div
+        ref={logoRef}
+        className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center sm:bottom-8"
+        style={{ opacity: 0 }}
+      >
         <Image
           src="https://res.cloudinary.com/dxzcutnlp/image/upload/v1771017624/Property_1_Variant4_vq9shb.png"
           alt="atto sound"
@@ -26,17 +51,6 @@ export default function Hero() {
           priority
         />
       </div>
-
-      <style jsx global>{`
-        @keyframes logoFade {
-          0% { opacity: 1; }
-          17% { opacity: 1; }
-          33% { opacity: 0; }
-          75% { opacity: 0; }
-          92% { opacity: 1; }
-          100% { opacity: 1; }
-        }
-      `}</style>
     </section>
   );
 }

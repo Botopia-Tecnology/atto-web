@@ -229,6 +229,7 @@ interface ThreadsProps
   distance?: number;
   enableMouseInteraction?: boolean;
   enableMorph?: boolean;
+  morphProgressRef?: React.RefObject<number>;
 }
 
 export default function Threads({
@@ -237,6 +238,7 @@ export default function Threads({
   distance = 0,
   enableMouseInteraction = false,
   enableMorph = false,
+  morphProgressRef,
   ...rest
 }: ThreadsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -319,8 +321,11 @@ export default function Threads({
       program.uniforms.iTime.value = timeSeconds;
 
       if (enableMorph) {
-        program.uniforms.uMorphProgress.value =
-          computeMorphProgress(timeSeconds);
+        const morphValue = computeMorphProgress(timeSeconds);
+        program.uniforms.uMorphProgress.value = morphValue;
+        if (morphProgressRef) {
+          (morphProgressRef as { current: number }).current = morphValue;
+        }
       }
 
       renderer.render({ scene: mesh });
@@ -340,7 +345,7 @@ export default function Threads({
       if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, [color, amplitude, distance, enableMouseInteraction, enableMorph]);
+  }, [color, amplitude, distance, enableMouseInteraction, enableMorph, morphProgressRef]);
 
   return <div ref={containerRef} className="threads-container" {...rest} />;
 }
