@@ -139,7 +139,8 @@ export default function Threads({
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    const renderer = new Renderer({ alpha: true });
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    const renderer = new Renderer({ alpha: true, dpr });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
@@ -169,9 +170,11 @@ export default function Threads({
     function resize() {
       const { clientWidth, clientHeight } = container;
       renderer.setSize(clientWidth, clientHeight);
-      program.uniforms.iResolution.value.r = clientWidth;
-      program.uniforms.iResolution.value.g = clientHeight;
-      program.uniforms.iResolution.value.b = clientWidth / clientHeight;
+      const w = gl.canvas.width;
+      const h = gl.canvas.height;
+      program.uniforms.iResolution.value.r = w;
+      program.uniforms.iResolution.value.g = h;
+      program.uniforms.iResolution.value.b = w / h;
     }
     window.addEventListener("resize", resize);
     resize();

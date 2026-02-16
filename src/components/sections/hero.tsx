@@ -16,6 +16,13 @@ export default function Hero() {
       </div>
 
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-end gap-4 pb-24">
+        <button
+          onClick={() => setOpen(true)}
+          className="rounded-lg bg-white px-5 py-2 text-sm font-medium text-black transition-opacity hover:opacity-80 sm:px-6 sm:text-base"
+        >
+          Sign Up
+        </button>
+
         <a
           href="https://www.instagram.com/attosound_?igsh=Mm1pNmhkOTlxNHd4&utm_source=qr"
           target="_blank"
@@ -39,13 +46,6 @@ export default function Hero() {
             <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
           </svg>
         </a>
-
-        <button
-          onClick={() => setOpen(true)}
-          className="rounded-lg bg-white px-5 py-2 text-sm font-medium text-black transition-opacity hover:opacity-80 sm:px-6 sm:text-base"
-        >
-          Sign Up
-        </button>
 
         <WaitlistCounter increment={signUpCount} />
       </div>

@@ -35,7 +35,7 @@ export default function WaitlistCounter({
   return (
     <div className="text-center text-sm text-neutral-400">
       <span className="font-semibold text-white">
-        {displayCount.toLocaleString()}
+        {String(displayCount).padStart(4, "0")}
       </span>{" "}
       on the waitlist
     </div>
