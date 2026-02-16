@@ -52,15 +52,18 @@ type Status = "idle" | "loading" | "success" | "error";
 export default function SignUpModal({
   open,
   onOpenChange,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+1");
   const [phone, setPhone] = useState("");
+  const [os, setOs] = useState<"ios" | "android">("ios");
   const [status, setStatus] = useState<Status>("idle");
 
   function reset() {
@@ -69,11 +72,21 @@ export default function SignUpModal({
     setEmail("");
     setCountryCode("+1");
     setPhone("");
+    setOs("ios");
     setStatus("idle");
   }
 
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = /^\d{6,15}$/.test(phone.replaceAll(" ", ""));
+  const isFormValid =
+    firstName.trim() !== "" &&
+    lastName.trim() !== "" &&
+    isValidEmail &&
+    isValidPhone;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!isFormValid) return;
     setStatus("loading");
 
     const url = process.env.NEXT_PUBLIC_GOOGLE_SHEET_URL;
@@ -92,9 +105,11 @@ export default function SignUpModal({
           lastName,
           email,
           phone: `${countryCode}${phone}`,
+          os,
         }),
       });
       setStatus("success");
+      onSuccess?.();
     } catch {
       setStatus("error");
     }
@@ -213,9 +228,43 @@ export default function SignUpModal({
             </div>
           </div>
 
+          <div className="grid gap-1.5">
+            <Label className="text-neutral-300">Platform</Label>
+            <div className="flex h-10 rounded-lg border border-neutral-700 bg-neutral-900 p-1">
+              <button
+                type="button"
+                onClick={() => setOs("ios")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${
+                  os === "ios"
+                    ? "bg-white text-black"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                </svg>
+                iOS
+              </button>
+              <button
+                type="button"
+                onClick={() => setOs("android")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${
+                  os === "android"
+                    ? "bg-white text-black"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.523 15.341a.96.96 0 0 0 .953-.957c0-.53-.426-.96-.953-.96a.96.96 0 0 0-.954.96.96.96 0 0 0 .954.957m-11.046 0a.96.96 0 0 0 .954-.957.96.96 0 0 0-.954-.96.96.96 0 0 0-.953.96.96.96 0 0 0 .953.957m11.4-6.5 1.996-3.46a.416.416 0 0 0-.152-.567.41.41 0 0 0-.563.154l-2.023 3.51a12.2 12.2 0 0 0-5.135-1.1c-1.84 0-3.55.394-5.135 1.1L4.84 4.968a.41.41 0 0 0-.563-.154.416.416 0 0 0-.152.567L6.12 8.84C2.53 10.836.436 14.18.094 18h23.812c-.34-3.82-2.435-7.164-6.029-9.159" />
+                </svg>
+                Android
+              </button>
+            </div>
+          </div>
+
           <Button
             type="submit"
-            disabled={status === "loading"}
+            disabled={!isFormValid || status === "loading"}
             className="mt-1 w-full bg-white text-black hover:bg-neutral-200 disabled:opacity-50"
           >
             {status === "loading" ? "Submitting..." : "Submit"}

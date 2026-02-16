@@ -55,43 +55,50 @@ float sdCapsule(vec2 p, vec2 a, vec2 b, float r) {
     return length(pa - ba * h) - r;
 }
 
-// Draw all 7 faders as SDF shapes with heartbeat pulse
+// Draw all 7 faders as SDF shapes with heartbeat pulse, clipped to a circle
 float drawFaders(vec2 uv, float pulse, float time) {
     float aspect = iResolution.x / iResolution.y;
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.55);
 
-    // Responsive scaling: on portrait/narrow screens, shrink capsules to avoid overlap
-    float rScale = smoothstep(0.5, 1.5, aspect);
-
-    // Heartbeat pulse: scale capsules slightly
     float pulseScale = 1.0 + pulse * 0.07;
-
     float result = 0.0;
     float px = pixel(1.0, iResolution.xy);
 
-    // On portrait screens, spread faders wider to fill more of the width
-    float xSpread = mix(1.7, 1.0, rScale);
+    // Decoupled X/Y scales: X pushes outer faders to circle edge for
+    // crescent clipping; Y keeps capsules short enough for visible stems.
+    float xScale = 0.88;
+    float yScale = 0.42;
+    float circleRadius = 0.24;
 
     for (int i = 0; i < FADER_COUNT; i++) {
         vec3 fader = getFader(i);
-        float fx = (fader.x - 0.5) * xSpread * aspect;
-        float fy = fader.y - 0.5;
-        float kh = fader.z * mix(0.55, 1.0, rScale) * pulseScale;
+        float fx = (fader.x - 0.5) * xScale;
+        float fy = (fader.y - 0.5) * yScale;
+        float kh = fader.z * yScale * pulseScale;
 
-        // Thin stem (full height vertical line)
-        float stemWidth = 0.004 * mix(0.6, 1.0, rScale);
+        // Thin stem
+        float stemWidth = 0.0015;
         float stemDist = abs(p.x - fx) - stemWidth;
-        float stemAlpha = smoothstep(px, 0.0, stemDist) * 0.70;
+        float stemAlpha = smoothstep(px, 0.0, stemDist) * 0.55;
 
-        // Capsule knob — radius matched to original (~0.020 in p-space)
+        // Capsule knob
         vec2 knobTop = vec2(fx, fy + kh);
         vec2 knobBot = vec2(fx, fy - kh);
-        float knobRadius = 0.038 * mix(0.5, 1.0, rScale) * pulseScale;
+        float knobRadius = 0.016 * pulseScale;
         float knobDist = sdCapsule(p, knobBot, knobTop, knobRadius);
-        float knobAlpha = smoothstep(px, -px * 0.5, knobDist) * mix(0.85, 1.0, pulse);
+        float knobAlpha = smoothstep(px, -px, knobDist);
+        // Subtle glow around capsule during pulse
+        float glowDist = knobDist - 0.008 * pulse;
+        float glow = smoothstep(0.02, 0.0, glowDist) * pulse * 0.25;
+        knobAlpha = max(knobAlpha, glow);
 
         result = max(result, max(stemAlpha, knobAlpha));
     }
+
+    // Circular clipping mask
+    float circleDist = length(p);
+    float circleMask = smoothstep(px, -px, circleDist - circleRadius);
+    result *= circleMask;
 
     return result;
 }
