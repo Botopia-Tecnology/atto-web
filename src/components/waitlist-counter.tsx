@@ -37,7 +37,7 @@ export default function WaitlistCounter({
       <div className="text-lg font-semibold tracking-widest text-white">
         {String(displayCount).padStart(4, "0")}
       </div>
-      <div className="text-xs uppercase tracking-wider text-neutral-400">
+      <div className="text-xs uppercase tracking-wider text-white">
         waitlist
       </div>
     </div>
