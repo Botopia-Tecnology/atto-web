@@ -33,11 +33,13 @@ export default function WaitlistCounter({
   if (displayCount === null) return null;
 
   return (
-    <div className="text-center text-sm text-neutral-400">
-      <span className="font-semibold text-white">
+    <div className="text-center">
+      <div className="text-lg font-semibold tracking-widest text-white">
         {String(displayCount).padStart(4, "0")}
-      </span>{" "}
-      on the waitlist
+      </div>
+      <div className="text-xs uppercase tracking-wider text-neutral-400">
+        waitlist
+      </div>
     </div>
   );
 }

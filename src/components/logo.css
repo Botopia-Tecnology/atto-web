@@ -1,0 +1,25 @@
+.logo-capsule {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: logo-heartbeat 1.2s ease-in-out infinite;
+}
+
+@keyframes logo-heartbeat {
+  0%,
+  5% {
+    transform: scale(1);
+  }
+  12.5% {
+    transform: scale(1.07);
+  }
+  20% {
+    transform: scale(1);
+  }
+  29% {
+    transform: scale(1.042);
+  }
+  38%,
+  100% {
+    transform: scale(1);
+  }
+}
