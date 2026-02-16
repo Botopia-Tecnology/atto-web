@@ -8,49 +8,50 @@ import WaitlistCounter from "@/components/waitlist-counter";
 /** Starts heartbeat audio on first user interaction (iOS Safari compatible). */
 function useHeartbeatSound() {
   useEffect(() => {
-    const ctx = new AudioContext();
+    let ctx: AudioContext | null = null;
     let timer: ReturnType<typeof setInterval>;
     const abort = new AbortController();
 
-    function thump(time: number, gain: number) {
+    function thump(ac: AudioContext, time: number, gain: number) {
       // Low tone with frequency sweep for body
-      const lo = ctx.createOscillator();
-      const loG = ctx.createGain();
+      const lo = ac.createOscillator();
+      const loG = ac.createGain();
       lo.type = "sine";
       lo.frequency.setValueAtTime(150, time);
       lo.frequency.exponentialRampToValueAtTime(40, time + 0.1);
       loG.gain.setValueAtTime(gain, time);
       loG.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
-      lo.connect(loG).connect(ctx.destination);
+      lo.connect(loG).connect(ac.destination);
       lo.start(time);
       lo.stop(time + 0.2);
 
       // Higher harmonic for mobile speaker presence
-      const hi = ctx.createOscillator();
-      const hiG = ctx.createGain();
+      const hi = ac.createOscillator();
+      const hiG = ac.createGain();
       hi.type = "sine";
       hi.frequency.setValueAtTime(300, time);
       hi.frequency.exponentialRampToValueAtTime(80, time + 0.08);
       hiG.gain.setValueAtTime(gain * 0.4, time);
       hiG.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-      hi.connect(hiG).connect(ctx.destination);
+      hi.connect(hiG).connect(ac.destination);
       hi.start(time);
       hi.stop(time + 0.15);
     }
 
     function playBeat() {
-      if (ctx.state === "closed") return;
+      if (!ctx || ctx.state === "closed") return;
       const t = ctx.currentTime;
-      thump(t, 0.35);        // S1 — lub
-      thump(t + 0.22, 0.2);  // S2 — dub
+      thump(ctx, t, 0.35);        // S1 — lub
+      thump(ctx, t + 0.22, 0.2);  // S2 — dub
     }
 
     function start() {
       abort.abort();
-      ctx.resume().then(() => {
-        playBeat();
-        timer = setInterval(playBeat, 1200);
-      });
+      // Create AudioContext INSIDE the gesture handler — Safari requires this
+      const AC = window.AudioContext ?? (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      ctx = new AC();
+      playBeat();
+      timer = setInterval(playBeat, 1200);
     }
 
     const opts = { signal: abort.signal };
@@ -60,7 +61,7 @@ function useHeartbeatSound() {
     return () => {
       clearInterval(timer);
       abort.abort();
-      ctx.close();
+      ctx?.close();
     };
   }, []);
 }
