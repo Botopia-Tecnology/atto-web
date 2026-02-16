@@ -58,17 +58,20 @@ float sdCapsule(vec2 p, vec2 a, vec2 b, float r) {
 // Draw all 7 faders as SDF shapes with heartbeat pulse, clipped to a circle
 float drawFaders(vec2 uv, float pulse, float time) {
     float aspect = iResolution.x / iResolution.y;
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.55);
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.60);
 
     float pulseScale = 1.0 + pulse * 0.07;
     float result = 0.0;
     float px = pixel(1.0, iResolution.xy);
 
+    // Uniform scale factor — shrinks the entire logo proportionally
+    float logoScale = 0.80;
+
     // Decoupled X/Y scales: X pushes outer faders to circle edge for
     // crescent clipping; Y keeps capsules short enough for visible stems.
-    float xScale = 0.88;
-    float yScale = 0.42;
-    float circleRadius = 0.24;
+    float xScale = 0.88 * logoScale;
+    float yScale = 0.42 * logoScale;
+    float circleRadius = 0.24 * logoScale;
 
     for (int i = 0; i < FADER_COUNT; i++) {
         vec3 fader = getFader(i);
@@ -77,14 +80,14 @@ float drawFaders(vec2 uv, float pulse, float time) {
         float kh = fader.z * yScale * pulseScale;
 
         // Thin stem
-        float stemWidth = 0.0015;
+        float stemWidth = 0.0015 * logoScale;
         float stemDist = abs(p.x - fx) - stemWidth;
         float stemAlpha = smoothstep(px, 0.0, stemDist) * 0.55;
 
         // Capsule knob
         vec2 knobTop = vec2(fx, fy + kh);
         vec2 knobBot = vec2(fx, fy - kh);
-        float knobRadius = 0.016 * pulseScale;
+        float knobRadius = 0.016 * logoScale * pulseScale;
         float knobDist = sdCapsule(p, knobBot, knobTop, knobRadius);
         float knobAlpha = smoothstep(px, -px, knobDist);
 

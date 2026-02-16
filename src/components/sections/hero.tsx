@@ -15,7 +15,7 @@ export default function Hero() {
         <Threads color={[1, 1, 1]} />
       </div>
 
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-end gap-4 pb-20">
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-end gap-4 pb-24">
         <a
           href="https://www.instagram.com/attosound_?igsh=Mm1pNmhkOTlxNHd4&utm_source=qr"
           target="_blank"
