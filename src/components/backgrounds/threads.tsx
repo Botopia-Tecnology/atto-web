@@ -87,10 +87,6 @@ float drawFaders(vec2 uv, float pulse, float time) {
         float knobRadius = 0.016 * pulseScale;
         float knobDist = sdCapsule(p, knobBot, knobTop, knobRadius);
         float knobAlpha = smoothstep(px, -px, knobDist);
-        // Subtle glow around capsule during pulse
-        float glowDist = knobDist - 0.008 * pulse;
-        float glow = smoothstep(0.02, 0.0, glowDist) * pulse * 0.25;
-        knobAlpha = max(knobAlpha, glow);
 
         result = max(result, max(stemAlpha, knobAlpha));
     }
