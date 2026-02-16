@@ -1,13 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Logo from "@/components/logo";
 import SignUpModal from "@/components/signup-modal";
 import WaitlistCounter from "@/components/waitlist-counter";
 
+/** Starts heartbeat audio on first user interaction (iOS Safari compatible). */
+function useHeartbeatSound() {
+  useEffect(() => {
+    const ctx = new AudioContext();
+    let timer: ReturnType<typeof setInterval>;
+    const abort = new AbortController();
+
+    function playBeat() {
+      if (ctx.state === "closed") return;
+      const t = ctx.currentTime;
+
+      // S1 — lub
+      const o1 = ctx.createOscillator();
+      const g1 = ctx.createGain();
+      o1.type = "sine";
+      o1.frequency.value = 50;
+      g1.gain.setValueAtTime(0, t);
+      g1.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      o1.connect(g1).connect(ctx.destination);
+      o1.start(t);
+      o1.stop(t + 0.15);
+
+      // S2 — dub
+      const o2 = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      o2.type = "sine";
+      o2.frequency.value = 40;
+      g2.gain.setValueAtTime(0, t + 0.2);
+      g2.gain.linearRampToValueAtTime(0.08, t + 0.22);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o2.connect(g2).connect(ctx.destination);
+      o2.start(t + 0.2);
+      o2.stop(t + 0.35);
+    }
+
+    function start() {
+      abort.abort();
+      ctx.resume().then(() => {
+        playBeat();
+        timer = setInterval(playBeat, 1200);
+      });
+    }
+
+    const opts = { signal: abort.signal };
+    document.addEventListener("click", start, opts);
+    document.addEventListener("touchstart", start, opts);
+
+    return () => {
+      clearInterval(timer);
+      abort.abort();
+      ctx.close();
+    };
+  }, []);
+}
+
 export default function Hero() {
   const [open, setOpen] = useState(false);
   const [signUpCount, setSignUpCount] = useState(0);
+  useHeartbeatSound();
 
   return (
     <section className="relative h-dvh w-full overflow-hidden bg-black">
