@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "atto sound | Music Production",
-  description: "atto sound — music production",
+  title: "ATTO SOUND",
+  description:
+    "ATTO SOUND is a record label, content platform, and social network that discovers, showcases, and monetizes the creativity of incarcerated talent, giving them a way out while connecting them with the world.",
 };
 
 export default function RootLayout({
