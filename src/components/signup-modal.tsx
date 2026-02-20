@@ -47,7 +47,7 @@ const COUNTRY_CODES = [
   { code: "+254", label: "KE +254" },
 ];
 
-type Status = "idle" | "loading" | "success" | "error";
+type Status = "idle" | "loading" | "success" | "error" | "duplicate";
 
 export default function SignUpModal({
   open,
@@ -96,6 +96,16 @@ export default function SignUpModal({
     }
 
     try {
+      // Check for duplicate email via GET (readable response, no CORS issue)
+      const check = await fetch(
+        `${url}?email=${encodeURIComponent(email)}`
+      );
+      const checkData = await check.json();
+      if (checkData.exists) {
+        setStatus("duplicate");
+        return;
+      }
+
       await fetch(url, {
         method: "POST",
         mode: "no-cors",
@@ -270,6 +280,11 @@ export default function SignUpModal({
             {status === "loading" ? "Submitting..." : "Submit"}
           </Button>
 
+          {status === "duplicate" && (
+            <p className="text-center text-sm text-amber-400">
+              This email is already on the waitlist.
+            </p>
+          )}
           {status === "error" && (
             <p className="text-center text-sm text-red-400">
               Something went wrong. Please try again.
