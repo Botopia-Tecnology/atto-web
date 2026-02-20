@@ -17,7 +17,7 @@ export default function WaitlistCounter({
       try {
         const res = await fetch(url!);
         const data = await res.json();
-        setCount(Math.max(0, data.count - 1));
+        setCount(data.count);
       } catch {
         /* silently fail */
       }
